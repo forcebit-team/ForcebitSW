@@ -1,7 +1,17 @@
 # User Manual - Forcebit Wireless Measurement
 
+## Repository Contents
+
+| File / Folder | Description |
+|---|---|
+| `ForcebitSW.zip` | The complete Forcebit software package. Extract this to your PC to install the measurement application, GUI, BAT scripts, Python (with PyForcebit environment), and Matlab utilities. |
+| `Forcebit_Sensor_User_Manual_and_Safety_Regulations.pdf` | Official PDF document covering hardware safety regulations, sensor handling guidelines, and product specifications for the Forcebit sensor family. |
+| `README.md` | This file. A step-by-step software user manual explaining installation, GUI usage, BAT file usage, and Python/Matlab scripting integration. |
+| `README_figures/` | Folder of screenshots and diagrams referenced throughout this manual. |
+
 ## Table of Contents
 - [User Manual - Forcebit Wireless Measurement](#user-manual---forcebit-wireless-measurement)
+  - [Repository Contents](#repository-contents)
   - [Table of Contents](#table-of-contents)
   - [General info](#general-info)
   - [Product info](#product-info)

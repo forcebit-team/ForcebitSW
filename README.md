@@ -389,14 +389,19 @@ What you need to do to run or debug your python application using PyForcebit mea
    1. See the general view below, you can have two options: 1. setting manually, 2. Pycharms automatically sets PyForcebit for you.
 
    ![Pycharm view](./README_figures/general_view.png)
+
    2. If you go with manual selection press, "No Interpreter" tab. Then, this tab will open:
 
-   ![Add new interpreter](./README_figures/interpreter_log.png)
+   ![Add new interpreter](./README_figures/interpretter_log.png)
+
    3. Select Add New Interpreter > Add local Interpreter.
+
    4. A window pops up below:
 
-   ![Interpreter selection](./README_figures/set_interpreter.png)
+   ![Interpreter selection](./README_figures/set_interpretter.png)
+
    5. Select "System Interpreter" and browse to the `.\PyForcebit\python.exe`.
+
 4. Run or debug the python code using the button's shown below. It is possible to set a breakpoint at any line and watch the local variables in the code.
 
 ![Run and Debug buttons](./README_figures/run_measurement.png)

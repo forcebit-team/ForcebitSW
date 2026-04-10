@@ -4,13 +4,16 @@
 - [User Manual - Forcebit Wireless Measurement](#user-manual---forcebit-wireless-measurement)
   - [Table of Contents](#table-of-contents)
   - [Repository Contents](#repository-contents)
+  - [Tutorials](#tutorials)
   - [General info](#general-info)
   - [Product info](#product-info)
     - [Dot](#dot)
     - [Accbit](#accbit)
     - [Telbit](#telbit)
+  - [Disclaimer](#disclaimer)
   - [Requirements](#requirements)
   - [Installation](#installation)
+  - [Measurements](#measurements)
   - [1. How to run a measurement with GUI](#1-how-to-run-a-measurement-with-gui)
     - [1.1 Measurement](#11-measurement)
     - [1.2 Calibration](#12-calibration)
@@ -31,6 +34,10 @@
 | `Forcebit_Sensor_User_Manual_and_Safety_Regulations.pdf` | Official PDF document covering hardware safety regulations, sensor handling guidelines, and product specifications for the Forcebit sensor family. |
 | `README.md` | This file. A step-by-step software user manual explaining installation, GUI usage, BAT file usage, and Python/Matlab scripting integration. |
 | `README_figures/` | Folder of screenshots and diagrams referenced throughout this manual. |
+
+## Tutorials
+
+You can find the video tutorials for installation and measurement with Forcebit software in [here](https://www.forcebit.eu/videos).
 
 ## General info
 
@@ -101,12 +108,11 @@ You can find more information and technical specifications of the Accbit sensor 
 The Telbit is a wireless, multi-axial telemetry system for measuring shaft angle, angular velocity, angular acceleration, strain and temperature.
 You can find more information and technical specifications of the Telbit sensor on [https://forcebit.eu/products/telbit/](https://forcebit.eu/products/telbit/).
 
-<!-- ## Disclaimer
+## Disclaimer
 
 This software is developed to perform wireless measurements with Forcebit sensors.
 It is tested on Windows 10 and 11 operating systems.
 The software is provided for free of charge for Forcebit customers.
- -->
 
 ## Requirements
 
@@ -117,15 +123,18 @@ The software is provided for free of charge for Forcebit customers.
 
 ## Installation
 
-* Please unzip `ForcebitSW.zip` to your PC, preferably with 7Zip [download here](https://www.7-zip.org/download.html). The directory that you extract `ForcebitSW.zip` file is the [installation_path], e.g. `C:\ForcebitSW`.
+* Please unzip `ForcebitSW.zip` to **a local drive (C:\ or D:\ drive) at your PC**, preferably with 7Zip [download here](https://www.7-zip.org/download.html). The directory that you extract `ForcebitSW.zip` file is the [installation_path], e.g. `C:\ForcebitSW`.
 * Save the sensor and gateway files to `[installation_path]\SensorAndGatewayFiles`.
 * That's all! You are set to go.
+
+## Measurements
 
 ## 1. How to run a measurement with GUI
 
 * Turn on your gateway by plugging it into a power source.
 * Check out the number written on your gateway, e.g. `GATEWAY 100007`. Then, 7 is the ID of your gateway.
 * Connect to `forcebit[ID]-gw` Wi-Fi, in this case `forcebit7-gw`.
+* Use the password instead of a PIN to access Forcebit Hotspot. Enter the password provided to connect to the Wi-Fi.
 * Go to the directory that `ForcebitSW` is installed.
 * Double-click on the `.\MainGUI.bat` and the GUI starts.
 

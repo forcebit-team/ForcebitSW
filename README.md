@@ -123,8 +123,8 @@ The software is provided for free of charge for Forcebit customers.
 
 ## Installation
 
-* Please unzip `ForcebitSW.zip` to **a local drive (C:\ or D:\ drive) at your PC**, preferably with 7Zip [download here](https://www.7-zip.org/download.html). The directory that you extract `ForcebitSW.zip` file is the [installation_path], e.g. `C:\ForcebitSW`.
-* Save the sensor and gateway files to `[installation_path]\SensorAndGatewayFiles`.
+* Please unzip `ForcebitSW.zip` to **a local drive (C:\ or D:\ drive) at your PC**, preferably with 7Zip [[download here](https://www.7-zip.org/download.html)]. The directory that you extract `ForcebitSW.zip` file is the [installation_path], e.g. `C:\ForcebitSW`.
+* Save the provided sensor and gateway files to `[installation_path]\SensorAndGatewayFiles`.
 * That's all! You are set to go.
 
 ## Measurements

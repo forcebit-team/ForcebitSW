@@ -43,6 +43,7 @@
 | `ForcebitSW.zip` | The complete Forcebit software package. Extract this to your PC to install the measurement application, GUI, BAT scripts, Python (with PyForcebit environment), and Matlab utilities. |
 | `Forcebit_Sensor_User_Manual_and_Safety_Regulations.pdf` | Official PDF document covering hardware safety regulations, sensor handling guidelines, and product specifications for the Forcebit sensor family. |
 | `README.md` | This file. A step-by-step software user manual explaining installation, GUI usage, BAT file usage, and Python/Matlab scripting integration. |
+| `wifi setup/` | Scripts that set the Windows Wi-Fi adapter to Maximum Performance on battery power (`AddForcebitPowerFix.bat`) and undo it (`RemoveForcebitPowerFix.bat`). See [Wi-Fi power fix](#wifi-power-fix). |
 | `README_figures/` | Folder of screenshots and diagrams referenced throughout this manual. |
 
 ## Tutorials
@@ -85,6 +86,7 @@ This is the user manual for performing wireless measurements using Forcebit prod
 This manual is tailored for installation and usage of the software on Windows operating system (Win10 or higher).
 In order to use the software, you need at least one Forcebit gateway and one or more Forcebit sensors (Dot, Accbit or Telbit).
 Make sure your laptop is not in power save mode, as it may cause connection issues or problems with displaying.
+If you measure on battery power, also apply the [Wi-Fi power fix](#wifi-power-fix).
 We recommend using a laptop with at least 8GB RAM and a dual-core processor, ensuring it's connected to a power source during measurements.
 
 <a id="powering-the-gateway"></a>You can power the gateway by plugging it into a power adapter or a powerbank for mobile applications, see the figure below.
@@ -218,6 +220,7 @@ If one of the criteria fails, the test reports `Connection: Bad` together with t
   1. Make sure your gateway is powered with a 5V and at least 15W/3A stable power source.
   2. Make sure your PC is at least in balanced energy mode (not in power save mode).
   3. Plug your computer in, or use the external Wi-Fi adapter to connect to the gateway Wi-Fi.
+  4. If you must work on battery, apply the [Wi-Fi power fix](#wifi-power-fix).
 * **Low signal strength:**
   1. Move closer to the gateway.
   2. Remove the obstacles between your PC and the gateway.
@@ -225,6 +228,22 @@ If one of the criteria fails, the test reports `Connection: Bad` together with t
 After you have addressed the issues, press `Start` again to retest. Repeat the test until the connection is reported as `Good`.
 
 **Note:** If the gateway connection is lost during the test, the test is aborted with a warning and you have to reconnect to the gateway Wi-Fi and start again.
+
+<a id="wifi-power-fix"></a>
+**Wi-Fi power fix (laptops on battery):**
+
+Windows keeps separate Wi-Fi `Power Saving Mode` settings for mains and battery power, and by default the battery one saves power.
+On battery, the Wi-Fi adapter then sleeps between transmissions and the latency to the gateway becomes irregular, with occasional delays of 200-350 ms.
+This can make commands time out and the GUI stop responding, even next to the gateway.
+The fix sets the adapter to Maximum Performance for all Windows power plans, so that the connection on battery behaves like the connection on mains.
+
+1. Open the `wifi setup` folder of the Forcebit software.
+2. Double-click `AddForcebitPowerFix.bat` and accept the Administrator prompt.
+3. Wait until the script finishes applying the power fix and press OK.
+4. Run the Connectivity Test again.
+
+To restore your original Windows settings, double-click `RemoveForcebitPowerFix.bat` in the same folder.
+The fix increases the battery consumption of your laptop slightly while it is applied.
 
 ## Measurements
 
@@ -287,6 +306,7 @@ Moreover, you can also set the folder where the measurement results are saved on
 ![Settings tab with one configuration box per sensor for frequency, range, signal power and signal selection, and the data folder at the bottom left](./README_figures/MeasurementSettings.png)
 
 8. For Accbit and Telbit, if you want to measure the acceleration directly from the sensor, you can press the `show more` button to check the acceleration signals. ADC signals can be filtered with a low-pass 4th order Butterworth filter for Telbit. You can set the cut-off frequency in Hz from the dialog that pops-up with `show more` button.
+The same dialog also carries the `Smoothing` setting of that sensor, so you can change the smoothing of the rotational signals (`Angle`, `Vel` and `Acc`) without calibrating the sensor again, see [1.2 Calibration](#12-calibration). It is recommended to reduce the smoothing if critical dynamics are too much attenuated.  
 
 ![The show more dialogs: acceleration checkboxes for an Accbit, and the same plus the filter cut-off frequencies for a Telbit](./README_figures/MoreSignals.png)
  
@@ -319,6 +339,10 @@ After the synchronization, the measurement results (`.h5` and/or `.csv` files, s
 The sensor and gateway icons turn to <span style="color:blue">blue</span> showing that they are connected and ready for another measurement, and `Stop` button turns to `Start` button.
 You can start another measurement by pressing the `Start` button again.
 
+   Each plot has a toolbar above it with which you can zoom in, pan and save the displayed figure as an image file.
+   This works in both the Measurement and the Calibration Window, during and after a run.
+   It is independent of the `Save figures after measurement` option, which stores all plots automatically after every run, see [1.4 Advanced Settings](#14-advanced-settings).
+
 ![Measure tab after a run, with the status line reading Measurement completed. Time synching ...](./README_figures/TimeSynching.png)
 
 13. If you want to change the measurement settings, you can go back to the `Settings` tab by pressing the `Previous` button. If you want to change the connected sensors, you can go back to the `Connect` tab by pressing the `Previous` button twice.
@@ -334,8 +358,23 @@ Every time you re-mount the sensor, or move it to another shaft, you have to cal
 The steps for calibration are similar to the measurement until the `Calibrate` Tab (steps 1-9). The differences are explained below:
 
 * You can select only one Accbit or Telbit for calibration at a time.
-* In the `Settings` tab, you can only set frequency, acceleration range and signal power. The signals to be measured are fixed for calibration: the four channels `C1` to `C4` of the sensor.
+* In the `Settings` tab, you can only set frequency, acceleration range, signal power and `Smoothing`. The signals to be measured are fixed for calibration: the four channels `C1` to `C4` of the sensor.
 * It is advised to set the frequency and acceleration range as high as possible (8kHz and 16g) for better calibration results.
+* How the calibration results are stored is set with the `Advanced` button in the `Settings` tab, next to the data folder, see [1.4 Advanced Settings](#14-advanced-settings).
+
+**Smoothing.** `Smoothing` determines how strongly the rotational signals (`Angle`, `Vel` and `Acc`) are smoothed when you measure with the calibrated sensor afterwards. The default is `Balanced`, which is suitable for most shafts.
+
+| Setting | Choose it when |
+|---|---|
+| `High` | If you are interested in low frequency dynamics of the acceleration signal. |
+| `Balanced` (default) | Normal operation. |
+| `Moderate`, `Light` | When you want a compromise between capturing the high frequency and attenuating the noise. |
+| `Minimal`, `Absent` | You measure fast speed changes, shocks or start-ups and the signals have to follow them as closely as possible. Select this choice for order tracking and eigenfrequency analysis. |
+
+The selected level is stored together with the calibration, so it is applied automatically in your next measurement.
+You can change it afterwards without calibrating again: in the Measurement Window, press `show more` for that sensor in the `Settings` tab and select another level.
+
+![The sensor box in the Settings tab of the Calibration Window, showing the Smoothing drop-down below Signal Power](./README_figures/SmoothingSetting.png)
 
 1. In the `Calibrate` tab, you can set the calibration duration at the bottom left.
 Longer calibration durations generally produce more accurate results.
@@ -355,11 +394,19 @@ It is also  good practice to have high accelerations at low speeds to distinguis
 
 3. After the calibration measurement is completed, you can press the `Calibrate` button to perform the calibration.
 This may take several seconds depending on the measurement duration.
-After the calibration, the measurement results (in `Peripheral[nr]_[date/time].csv`  or `Peripheral[nr]_[date/time].h5` file) and the calibration results (in `calibrationPeripheral[nr]_[date/time].csv` or in `calibrationPeripheral[nr]_[date/time].h5` file) are saved in the selected data folder.
+After the calibration, both the `C1` to `C4` channels recorded during the run (in `calibrationPeripheral[nr]_[date/time].h5` or `.csv` file) and the calibration results (in `Peripheral[nr]_[date/time].h5` or `.csv` file) are saved in the selected data folder.
+If you selected `CSV (.csv)` in the `Advanced Settings`, the recorded channels are exported to CSV directly after the run, so they are already on disk while the calibration is still being computed.
 
-You can see the calibration results in the plots by selecting the desired signals on the signal selection panel on the left.
+When the calibration is finished, the velocity is plotted automatically, so you can judge the result right away without selecting it yourself.
+You can see the other calibration results in the plots by selecting the desired signals on the signal selection panel on the left.
 Now, you can use the calibrated sensor for measurements.
 If you start a measurement with `Angle`, `Vel` or `Acc` selected for a sensor that has not been calibrated yet, the software stops the run and asks you to calibrate first, see the [FAQs](#calibration-and-nulling).
+
+4. If the calibration could not determine reliable calibration constants, you are notified with an `Unsuccessful calibration` message.
+
+![Unsuccessful calibration dialog reading Calibration results are off. Please send an email to info@forcebit.eu for an explanation.](./README_figures/CalibrationFailed.png)
+
+The calibration constants are stored in `./temp/calibrationSettings_{perNr}.mat` file so you can send them along with the data for further analysis or support.
 
 ### 1.3 Nulling 
 
@@ -420,6 +467,13 @@ When `CSV (.csv)` is selected, two more options appear:
 * **Decimal separator:** `system` (default, follows your Windows setting), `dot` or `comma`. A comma cannot be used as delimiter and as decimal separator at the same time, so that combination is disabled.
 
 ![Advanced Settings dialog with CSV selected, showing the delimiter and decimal separator options](./README_figures/AdvancedSettingsDialog.png)
+
+**In the Calibration Window.** The same `Advanced` button is available in the `Settings` tab of the Calibration Window, with two differences:
+
+* **Save measurement figures after the run:** the same option as above, applied to the calibration run itself. It saves the `C1` to `C4` plots that were recorded during the run.
+* **Save state figures after calibration:** writes one extra `[run_name]_states.png` containing the calibrated angle, velocity and acceleration. This figure is always written after a successful calibration, whether or not you displayed those signals in the plots.
+
+The raw ADC option is not offered for a calibration run, because a calibration records the `C1` to `C4` channels only.
 
 These settings are saved in `[installation_path]\temp\sensor_settings.txt` and are remembered for your next measurement.
 
@@ -1113,6 +1167,34 @@ If it takes much longer than usual, one of the sensors may have lost its connect
 </details>
 
 <details>
+<summary><b>Q:</b> I get <code>Unsuccessful calibration - Calibration results are off.</code></summary>
+
+**Answer:** After a calibration, the software checks the constants it determined. This message means that they are outside the range that is expected for a correctly mounted sensor. The most common cause is that the shaft did not rotate enough, or not over a wide enough speed range, during the calibration run.
+
+The constants are stored anyway, so you can continue to measure with the sensor, but treat the rotational signals (`Angle`, `Vel`, `Acc`) as unreliable until a calibration succeeds.
+
+**Steps:**
+1. Check that the sensor is firmly mounted on the shaft and has not moved since you mounted it.
+2. Repeat the calibration with a longer duration, at least 3–5 minutes.
+3. During the run, increase the speed step by step up to the maximum speed you want to measure and then decrease it step by step, with high accelerations at low speeds.
+4. If the message keeps appearing, send an email to [info@forcebit.eu](mailto:info@forcebit.eu) and include your sensor ID and the calibration result file.
+
+**See also:** [1.2 Calibration](#12-calibration)
+
+</details>
+
+<details>
+<summary><b>Q:</b> My velocity signal looks too smooth, or too noisy.</summary>
+
+**Answer:** This is set by the `Smoothing` level of the sensor. Choose a lower level (`Moderate`, `Light`, `Minimal` or `Absent`) when the speed changes during the run and those changes are being smoothed away, and a higher level (`High`) when the shaft runs at a nearly constant speed and you want the smoothest possible signals. The default is `Balanced`.
+
+You do not have to calibrate the sensor again to change it: in the Measurement Window, press `show more` for that sensor in the `Settings` tab and select another level.
+
+**See also:** [1.2 Calibration](#12-calibration)
+
+</details>
+
+<details>
 <summary><b>Q:</b> I get <code>Invalid Selection - Only one sensor allowed in calibration mode</code>.</summary>
 
 **Answer:** Calibration is performed for one sensor at a time, because the procedure depends on how that specific sensor is mounted on the shaft. Deselect the other sensors and calibrate them one after the other.
@@ -1164,9 +1246,13 @@ Note that this also happens when the results of the previous run were not saved 
 ```
 Peripheral[nr]_[YYYY-MM-DD]_[HH-MM].h5     measurement data
 Peripheral[nr]_[YYYY-MM-DD]_[HH-MM].csv    same data as text (if CSV is selected)
-calibrationPeripheral[nr]_[date]_[time].h5/.csv   calibration results
+calibrationPeripheral[nr]_[date]_[time].h5/.csv   channels recorded during a calibration run
 [run_name]_figure_[n].png                  plot snapshots (if enabled)
+[run_name]_states.png                      calibrated angle, velocity and acceleration (if enabled)
+measurement.log                            sample frames that were not received
 ```
+
+`measurement.log` is written for every run. It lists the sample frames that did not reach your PC, so you can check afterwards whether the run was complete. An empty file means that no data was lost.
 
 The default data folder is `[installation_path]\data`, and the default run name is `run`. You can change the data folder in the `Settings` page and you can determine the run name at the top right edit label in `Measure` page.
 
@@ -1241,6 +1327,7 @@ A comma cannot be used as delimiter and as decimal separator at the same time, s
 1. Power the gateway from a 5V source with at least 15W/3A.
 2. Plug your laptop in and set Windows to at least the balanced energy mode.
 3. Use the external Wi-Fi adapter if your internal adapter aggressively saves power.
+4. If you are on battery, apply the [Wi-Fi power fix](#wifi-power-fix).
 
 **See also:** [Connectivity Test](#connectivity-test)
 
@@ -1255,6 +1342,18 @@ A comma cannot be used as delimiter and as decimal separator at the same time, s
 1. Check whether the sensors ran out of battery or moved out of range during the run.
 2. Power the gateway off and on.
 3. Scan and connect to the sensors again before the next measurement.
+
+</details>
+
+<details>
+<summary><b>Q:</b> The status bar shows <code>Gateway disconnected.</code> and the gateway field asks me to drop the gateway file again.</summary>
+
+**Answer:** The connection to the gateway was lost, for example because the PC left the gateway Wi-Fi or the gateway lost power. The software resets the gateway field so that you can reconnect.
+
+**Steps:**
+1. Check that the gateway is powered and that your PC is connected to the gateway Wi-Fi.
+2. Drop the gateway file on the gateway field again.
+3. Scan and connect to the sensors again.
 
 </details>
 
@@ -1278,6 +1377,8 @@ The plotting only affects the display — the data is recorded regardless of wha
 <summary><b>Q:</b> Where do I look when something goes wrong?</summary>
 
 **Answer:** The console window (black screen) that opens next to the GUI prints the detailed progress and error messages of the backend, while the status bar of the GUI only shows the short version. Keep that window open during measurements and include its content when you report a problem to us.
+
+In addition, every measurement folder contains a `measurement.log` file that lists the sample frames which were not received during that run. If the file is empty, no data was lost. If it contains many entries, the link between your PC and the gateway is the first thing to check, see the [Connectivity Test](#connectivity-test).
 
 </details>
 

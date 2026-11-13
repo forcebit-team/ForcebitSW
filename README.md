@@ -6,6 +6,7 @@
   - [Repository Contents](#repository-contents)
   - [Tutorials](#tutorials)
   - [General info](#general-info)
+  - [Data processing and storage on the gateway](#data-processing-and-storage-on-the-gateway)
   - [Product info](#product-info)
     - [Dot](#dot)
     - [Accbit](#accbit)
@@ -14,6 +15,7 @@
   - [Disclaimer](#disclaimer)
   - [Requirements](#requirements)
   - [Installation](#installation)
+    - [Updating the gateway software](#updating-the-gateway-software)
   - [Connectivity Test](#connectivity-test)
   - [Measurements](#measurements)
   - [1. How to run a measurement with GUI](#1-how-to-run-a-measurement-with-gui)
@@ -21,6 +23,8 @@
     - [1.2 Calibration](#12-calibration)
     - [1.3 Nulling](#13-nulling)
     - [1.4 Advanced Settings](#14-advanced-settings)
+    - [1.5 Measuring without the PC (Stop streaming)](#15-measuring-without-the-pc-stop-streaming)
+    - [1.6 Retrieval](#16-retrieval)
   - [2. How to run a measurement with BAT files](#2-how-to-run-a-measurement-with-bat-files)
     - [2.1 Measurement](#21-measurement)
     - [2.2 Calibration](#22-calibration)
@@ -40,10 +44,9 @@
 
 | File / Folder | Description |
 |---|---|
-| `ForcebitSW.zip` | The complete Forcebit software package. Extract this to your PC to install the measurement application, GUI, BAT scripts, Python (with PyForcebit environment), and Matlab utilities. |
+| `ForcebitSW.zip` | The complete Forcebit software package. Extract this to your PC to install the measurement application, GUI, BAT scripts, Python (with PyForcebit environment), Matlab utilities, the [Wi-Fi power fix](#wifi-power-fix) scripts (`wifi setup`) and the network route scripts for a secondary gateway (`router setup`, see [Preparing your PC](#preparing-your-pc-one-time-only)). |
 | `Forcebit_Sensor_User_Manual_and_Safety_Regulations.pdf` | Official PDF document covering hardware safety regulations, sensor handling guidelines, and product specifications for the Forcebit sensor family. |
 | `README.md` | This file. A step-by-step software user manual explaining installation, GUI usage, BAT file usage, and Python/Matlab scripting integration. |
-| `wifi setup/` | Scripts that set the Windows Wi-Fi adapter to Maximum Performance on battery power (`AddForcebitPowerFix.bat`) and undo it (`RemoveForcebitPowerFix.bat`). See [Wi-Fi power fix](#wifi-power-fix). |
 | `README_figures/` | Folder of screenshots and diagrams referenced throughout this manual. |
 
 ## Tutorials
@@ -84,7 +87,8 @@ Recommended if you received a gateway with automatic updating capabilities.
 
 This is the user manual for performing wireless measurements using Forcebit products.
 This manual is tailored for installation and usage of the software on Windows operating system (Win10 or higher).
-In order to use the software, you need at least one Forcebit gateway and one or more Forcebit sensors (Dot, Accbit or Telbit).
+In order to use the software, you need at least one Forcebit gateway and one or more Forcebit sensors (Dot, Accbit, Telbit or Forcebit).
+With two gateways you can run one time-synchronized measurement with more sensors, see [Measuring with two gateways](#measuring-with-multiple-gateways).
 Make sure your laptop is not in power save mode, as it may cause connection issues or problems with displaying.
 If you measure on battery power, also apply the [Wi-Fi power fix](#wifi-power-fix).
 We recommend using a laptop with at least 8GB RAM and a dual-core processor, ensuring it's connected to a power source during measurements.
@@ -102,7 +106,9 @@ Afterwards, the user can connect to the gateway via Ethernet cable.
 A gateway has 2 modes:
 
 1. connected mode: the gateway is connected and ready to receive commands.
-2. sampling mode: the gateway is receiving data from the connected sensors and sending them to the computer.
+2. sampling mode: the gateway is receiving data from the connected sensors, processing and recording them, and streaming them to the computer.
+
+While a gateway is in sampling mode, it keeps measuring and recording even if the computer disconnects, see [Data processing and storage on the gateway](#data-processing-and-storage-on-the-gateway).
 
 Each sensor has a unique ID, which is written on the sensor box and also on the sensor itself.
 A sensor has 3 modes: 
@@ -125,13 +131,48 @@ The sampling frequency and the number of channels depend on the sensor type:
 | Dot     | &lt;= 16 kHz |
 | Accbit  | &lt;= 8 kHz |
 | Telbit  | &lt;= 4 kHz (ADC), &lt;= 8 kHz (non-ADC) |
-| Aggregate | &lt;= 48 kHz |
+| Aggregate | &lt;= 48 kHz per gateway |
 
 A gateway can connect up to 6 sensors at the same time.
 It has a limit of aggregated sampling frequency of 48 kHz.
+With two gateways, each gateway has its own limit of 6 sensors and 48 kHz, so one run can hold up to 12 sensors and 96 kHz in total.
 Aggregated sampling frequency is the sum of the sampling rates of the channels of connected sensors.
 If a Dot is sampling at 16 kHz with 3 channels (Ax, Ay, Az), it consumes 16 x 3 = 48 kHz from the aggregated sampling frequency.
 If you sample an Accbit at 4 kHz and a Dot at 4 kHz with all channels, the aggregate sampling rate is 4 x 3 + 4 x 4 = 28 kHz.
+
+## Data processing and storage on the gateway
+
+The gateway does the heavy lifting of a measurement: it processes the sensor data itself and records every run on its own storage.
+Your PC only displays the live data and receives the finished results.
+
+**Processing on the gateway.** The gateway converts the raw sensor data into physical units, applies the filters and estimates the angle, velocity and acceleration of Accbits, Telbits and Forcebits.
+After the run, a smoothing filter refines the angle, velocity and acceleration estimates.
+The processing is optimised so that up to 48 kHz per gateway is processed and sent to your PC in quasi real time.
+
+**Every run is recorded on the gateway.** During a measurement, the gateway writes the results of every sensor to a run folder on its own storage, under the run name you chose.
+The live data that your PC receives over Wi-Fi is only used for displaying.
+If the Wi-Fi link between your PC and the gateway breaks down, the gateway keeps measuring and recording until the end of the run.
+
+**Results after the run.** When the run ends, the gateway time-synchronizes the results of all sensors and updates the angle, velocity and acceleration with the smoothing filter.
+Your PC then downloads these finished results into your data folder.
+You can also download any stored run later from the [Retrieval](#16-retrieval) page, for example after a measurement without the PC, see [1.5 Measuring without the PC](#15-measuring-without-the-pc-stop-streaming).
+
+**Absolute time.** Every result file contains the absolute UTC time of every sample (`unixtime` in `.h5`, `UNIXtime` in `.csv`).
+The gateway takes this time from your PC's clock when you connect, so keep your PC clock synchronized (Windows does this automatically when the PC is online).
+The time between the sensors and between the gateways is synchronized by the gateways themselves and does not depend on your PC.
+
+**Diagnostics.** The gateway writes a `measurement.log` file into every run folder. It lists the sample frames that were lost, the channels that were clipping and other events during the run, so you can check afterwards whether the run was complete.
+
+**Storage.** The gateway keeps a fixed amount of storage for runs and manages it for you:
+
+* Before a run starts, the software checks that the run fits. If it does not, a `Gateway storage` warning tells you how long the gateway can record at these settings, and you can choose `Start anyway` or `Cancel`.
+* When a new run does not fit, the oldest runs on the gateway are deleted to make room, and the warning tells you how many runs will be deleted.
+* You can see the used storage and delete runs yourself on the [Retrieval](#16-retrieval) page. (Recommended)
+
+**One file per sensor.** All configuration of a sensor is stored in its sensor file in `[installation_path]\SensorAndGatewayFiles`, e.g. `Telbit300002.txt` or `Accbit400001.txt`: the calibration constants and smoothing level, the ADC gains and offsets, the numerical gains and offsets from nulling, and the filter cut-off frequencies.
+The software sends this file to the gateway when the sensor is set up, so the gateway always measures with your latest settings.
+The same information is also written into the `.h5` and `.csv` result files of every sensor.
+To send the calibration of a sensor for support or analysis, send its sensor file.
 
 ## Product info
 
@@ -173,6 +214,16 @@ The software is provided for free of charge for Forcebit customers.
 * Please unzip `ForcebitSW.zip` to **a local drive (C:\ or D:\ drive) at your PC**, preferably with 7Zip [[download here](https://www.7-zip.org/download.html)]. The directory that you extract `ForcebitSW.zip` file is the [installation_path], e.g. `C:\ForcebitSW`.
 * Save the provided sensor and gateway files to `[installation_path]\SensorAndGatewayFiles`.
 * That's all! You are set to go.
+
+### Updating the gateway software
+
+When we release a new version of the gateway software, you can install it yourself:
+
+1. Turn on the gateway and connect your PC to its `forcebit[ID]-gw` Wi-Fi.
+2. Double-click `UpdateGateway.bat` in `[installation_path]`. It finds out from the connected Wi-Fi which gateway it is talking to, sends the new software and restarts the gateway software.
+3. Wait until the console window reports that the update is complete, then press any key.
+
+With two gateways, update each gateway separately by connecting to its own Wi-Fi.
 
 ## Connectivity Test
 
@@ -239,8 +290,7 @@ The fix sets the adapter to Maximum Performance for all Windows power plans, so 
 
 1. Open the `wifi setup` folder of the Forcebit software.
 2. Double-click `AddForcebitPowerFix.bat` and accept the Administrator prompt.
-3. Wait until the script finishes applying the power fix and press OK.
-4. Run the Connectivity Test again.
+3. Run the Connectivity Test again.
 
 To restore your original Windows settings, double-click `RemoveForcebitPowerFix.bat` in the same folder.
 The fix increases the battery consumption of your laptop slightly while it is applied.
@@ -254,25 +304,39 @@ The fix increases the battery consumption of your laptop slightly while it is ap
 * Connect to `forcebit[ID]-gw` Wi-Fi, in this case `forcebit7-gw`.
 * Use the password instead of a PIN to access Forcebit Hotspot. Enter the password provided to connect to the Wi-Fi.
 * Go to the directory that `ForcebitSW` is installed.
-* Double-click on the `.\MainGUI.bat` and the GUI starts.
+* Double-click on the `.\ForcebitApp.bat` and the GUI starts.
 
-* First, the Main Menu will appear. In the main menu, you have 2 options:
+* First, the Main Menu will appear. In the main menu, you have 3 options:
   1. Measurement: Select Measurement if your sensors are already calibrated after mounting to the shaft or you want to perform linear acceleration measurements. The nulling of the load sensors (Telbit or Forcebit) can be done in the Measurement Window.
-  2. Calibration: Select Calibration if you want to calibrate your Accbit, Telbit or Forcebit for rotational kinematics (angle, velocity and acceleration) after mounting to a shaft.
+  2. Calibration: Select Calibration if you want to calibrate your Accbit, Telbit or Forcebit for rotational kinematics (angle, velocity and acceleration) after mounting to a shaft. This option is only shown if you have an Accbit, Telbit or Forcebit sensor file.
+  3. Retrieval: Select Retrieval to copy runs that are stored on the gateway to your PC, or to delete them, see [1.6 Retrieval](#16-retrieval).
 
-![Main menu with the Measurement and Calibration buttons](./README_figures/MainMenu.jpg)
+![Main menu with the Measurement, Calibration and Retrieval buttons](./README_figures/MainMenu_v2.png)
 
 A console window (black screen) pops up to give you more information during the measurement process and for troubleshooting.
 
 ### 1.1 Measurement
 
+You can measure with one gateway, or with two gateways in one time-synchronized run.
+The steps below are the same for both. For two gateways, first set up the gateways and your PC as described in [Measuring with two gateways](#measuring-with-multiple-gateways) at the end of this section.
+
+**Steps:**
+
 1. The GUI starts from the `Connect` tab, where you can connect to the gateway and sensors.
-If you have only one gateway, the GUI automatically connects to it.
-For multiple gateways, press the `Drop Gateway File Here` button and select the desired file, or drag the gateway file from `[installation_path]\SensorAndGatewayFiles` into the designated area.
-A successful gateway connection is indicated by the `Gateway connected` message in the status bar.
-If the connection fails, ensure that your Wi-Fi is connected to `forcebit-gw`.
+The GUI connects to the gateway automatically if there is only one gateway file in `[installation_path]\SensorAndGatewayFiles`, or if one of the gateway files belongs to the gateway whose Wi-Fi your PC is connected to.
+Otherwise, press the `Drop Primary Gateway File Here` button and select the desired file, or drag the gateway file from `[installation_path]\SensorAndGatewayFiles` into the designated area.
+A successful gateway connection is indicated by the `Gateway connected` message in the status bar, and the area shows the gateway name and its PTP role, e.g. `Connected Primary Gateway: Gateway00016 (Master)`.
+If the connection fails, ensure that your Wi-Fi is connected to `forcebit[ID]-gw` of that gateway.
 
 ![Connect tab with the progress tabs, the gateway file import area and the status bar marked](./README_figures/GatewayConnection.png)
+
+**If the gateway is still measuring.** A gateway that is still running a measurement, for example after [Stop streaming](#15-measuring-without-the-pc-stop-streaming) or after your PC lost its connection, cannot be used for a new measurement until that run has ended.
+The status bar then tells you until when the run continues, e.g. `Measurement run_1 running until 14:30. Press stop to end prematurely.`, and the `Scan` button is replaced by a `Stop` button.
+
+* Wait until the run has ended: the gateway finishes the run and the GUI connects again by itself.
+* Or press `Stop` to end the run prematurely. The gateway stops the sensors and finishes the run as usual: the time-synchronized, post-processed results are stored on the gateway under the same run name, and you can retrieve them from the [Retrieval](#16-retrieval) page. After you pressed stop, the gateway is connected automatically after completing the postprocessing of the results.
+
+![Gateway is still busy with an ongoing measurement](./README_figures/GatewayBusy.png)
 
 2. After the connection is successful, `Scan` button is enabled. Then, you press the `Scan` button to list the Forcebit sensors in the vicinity (&lt; 20m) which are not connected to a gateway. Please make sure the sensor has enough power by plugging it, if you cannot see a sensor in the list.  
 
@@ -284,8 +348,23 @@ If the connection fails, ensure that your Wi-Fi is connected to `forcebit-gw`.
 
 4. After the connection, the `Connect` button is replaced with `Disconnect` button. You can disconnect the sensors by pressing the `Disconnect` button. If you want to reconnect, you can select the sensors again and press `Connect` button. 
 
+   **Adding the secondary gateway (two gateways only).** Once at least one sensor of the primary gateway is connected, the `Add Gateway` button becomes active.
+   * Press `Add Gateway`. A second page is added to the `Connect` tab, and the status bar shows `Checking gateway's Ethernet connections...` while the primary gateway looks for the other gateway on its Ethernet cable.
+   If it finds a gateway that matches one of the gateway files in `[installation_path]\SensorAndGatewayFiles`, that gateway is connected automatically. Otherwise, drop the gateway file of the slave gateway on the `Drop Secondary Gateway File Here` area.
+   Once connected, the area shows `Connected Secondary Gateway: Gateway00017 (Slave)`. You do not have to change the Wi-Fi of your PC.
+   * Press `Scan` and `Connect` on the second page to connect the sensors of the secondary gateway, as in steps 2 and 3. The scan only lists the sensors that this gateway can see.
+   * The buttons at the top of the tab, one per gateway, switch between the gateway pages, so you can check which sensors are connected where. The sensor icons at the top right show the sensors of the selected gateway.
+   * While the secondary gateway is connected, the `Disconnect` button of the primary gateway is disabled. Press `Remove Gateway` to remove the secondary gateway: its sensors are disconnected first, then the gateway is removed and the GUI returns to the primary gateway page. The primary gateway cannot be removed, but dropping another gateway file on the first page replaces it.
+
+![Secondary gateway added and connected to sensors](./README_figures/MultiGW_AddGateway.png)
+
+   If your PC does not have the Forcebit network route yet, a `Gateway Network Route Missing` warning appears when you press `Add Gateway`. Close the GUI, run `router setup\AddForcebitRoute.bat` as administrator and start again, see [Preparing your PC](#preparing-your-pc-one-time-only).
+
+   ![Gateway Network Route Missing warning asking to run router setup\AddForcebitRoute.bat as administrator](./README_figures/MultiGW_RouteMissing.png)
+
 
 5. If you plan to use the sensor and gateway configuration later on, you can save the configuration by specifying the name and pressing the `Save` button. To a load a saved configuration, you can press the `Load` button and select the configuration. This will automatically select the gateway and sensors and connects to them.
+With two gateways, `Save` and `Load` store and load the gateway and sensors of the selected gateway page.
 
 6. After you are connected to the gateway and sensors, you can press the `Next` button to proceed to the `Settings` tab. 
 
@@ -303,14 +382,23 @@ Moreover, you can also set the folder where the measurement results are saved on
 | Medium | 0 dB (default) |
 | High | 8 dB |
 
-![Settings tab with one configuration box per sensor for frequency, range, signal power and signal selection, and the data folder at the bottom left](./README_figures/MeasurementSettings.png)
+<!-- ![Settings tab with one configuration box per sensor for frequency, range, signal power and signal selection, and the data folder at the bottom left](./README_figures/MeasurementSettings.png) -->
+
+![Settings tab with one configuration box per sensor for frequency, range, signal power and signal selection, and the data folder at the bottom left](./README_figures/MeasurementSettingsPrimary.png)
+
+   With two gateways, the gateway buttons at the top switch between the settings of the sensors of each gateway, and the label at the top shows which gateway is selected. Set the sensors of the primary gateway, select the secondary gateway and set its sensors.
+
+![Settings tab with one configuration box per sensor for frequency, range, signal power and signal selection, and the data folder at the bottom left](./README_figures/MeasurementSettingsSecondary.png)
 
 8. For Accbit and Telbit, if you want to measure the acceleration directly from the sensor, you can press the `show more` button to check the acceleration signals. ADC signals can be filtered with a low-pass 4th order Butterworth filter for Telbit. You can set the cut-off frequency in Hz from the dialog that pops-up with `show more` button.
 The same dialog also carries the `Smoothing` setting of that sensor, so you can change the smoothing of the rotational signals (`Angle`, `Vel` and `Acc`) without calibrating the sensor again, see [1.2 Calibration](#12-calibration). It is recommended to reduce the smoothing if critical dynamics are too much attenuated.  
 
-![The show more dialogs: acceleration checkboxes for an Accbit, and the same plus the filter cut-off frequencies for a Telbit](./README_figures/MoreSignals.png)
+![The show more dialogs: acceleration checkboxes and the Smoothing setting for an Accbit, and the same plus the filter cut-off frequencies for a Telbit](./README_figures/MoreSignals.png)
+
+The filter cut-off frequencies are stored in the sensor file of that sensor, see [One file per sensor](#data-processing-and-storage-on-the-gateway).
  
 9. After setting the measurement settings, you can proceed to the `Measure` tab by pressing the `Next` button. GUI will set the sensor settings while proceeding to the `Measure` tab. This may take a while if you have many sensors connected.
+The GUI also sends the sensor file of every sensor to its gateway at this point.
 The settings that are applied to the connected sensors are stored in `sensor_settings.txt` file in the `[installation_path]\temp` folder to be remembered for the next measurement.
 
 10. In the `Measure` tab, you can set the measurement duration (as hours, minutes and seconds) at the bottom left and name the measurement run on the top right to access the results in the data folder. 
@@ -323,33 +411,90 @@ The other controls of this tab are:
    For load sensors you can null the signals from this tab with the `Nulling` button, see [1.3 Nulling](#13-nulling).
    How the results are stored is set with the `Advanced` button in the `Settings` tab, see [1.4 Advanced Settings](#14-advanced-settings).
 
-![Measure tab before a run, with the signal selection panels, Number of Plots, Run Name, Duration and Time Window](./README_figures/MeasurementTab.png)
+![Measure tab before a run, with the signal selection panels, Number of Plots, Run Name, Duration and Time Window](./README_figures/MeasurementTab_v2.png)
 
 11. After you are set (or you are OK with default values), you can start the measurement by pressing the `Start` button.
+If the run does not fit in the free storage of a gateway, a `Gateway storage` warning appears first, see [Storage](#data-processing-and-storage-on-the-gateway).
 After pressing the `Start` button, the gateway and sensor icons turn to <span style="color:green">green</span> and `Start` button turns to `Stop` button.
 The live plots will be shown during the measurement if you selected any signals to display.
 You can prematurely stop the measurement by pressing the `Stop` button.
 Otherwise, the measurement stops automatically after the specified duration. 
+With two gateways, both gateways start and stop together, and the sensors of both gateways appear in the same live plots.
 
-![Measure tab during a run, with live velocity and acceleration plots, green sensor icons and the Stop button](./README_figures/DuringMeasurement.png)
+![Measure tab during a run, with live velocity and acceleration plots, green gateway and sensor icons, and the Stop streaming and Stop buttons](./README_figures/DuringMeasurement_v2.png)
+If you ticked `Logging` in the [Advanced Settings](#14-advanced-settings), a `Stop streaming` button is also shown during the run, see [1.5 Measuring without the PC](#15-measuring-without-the-pc-stop-streaming).
 
-12. When the measurement is completed, the software performs clock synchronization if more than one sensor is used.
-This may take several seconds depending on the number of sensors used and the measurement duration.
-After the synchronization, the measurement results (`.h5` and/or `.csv` files, see [1.4 Advanced Settings](#14-advanced-settings)) and the plots are updated.
+12. When the measurement is completed, the gateway time-synchronizes the results and updates the angle, velocity and acceleration with the smoothing filter, see [Data processing and storage on the gateway](#data-processing-and-storage-on-the-gateway).
+This may take several seconds depending on the number of sensors used and the measurement duration. The console window reports each sensor that is time synced and updated.
+Your PC then downloads the finished results, the measurement results (`.h5` and/or `.csv` files, see [1.4 Advanced Settings](#14-advanced-settings)) and the plots are updated, and the status bar shows `Time synchronization completed.`
 The sensor and gateway icons turn to <span style="color:blue">blue</span> showing that they are connected and ready for another measurement, and `Stop` button turns to `Start` button.
 You can start another measurement by pressing the `Start` button again.
+
+   <a id="reading-the-results-of-a-multiple-gateway-run"></a>
+   **Results of a two-gateway run.** The results of all sensors of both gateways are written to the same measurement folder, one file per sensor.
+   All files share an absolute time base: the `unixtime` dataset in `.h5` files (next to the usual `time` dataset) and the `UNIXtime` column in `.csv` files (the last column).
+   In a streamed run, the usual `time` column of all sensors starts at the start of the sensor that started last, so it can be used to line up the sensors of both gateways.
+   In a run copied from the [Retrieval](#16-retrieval) page, `time` counts from the first sample of each sensor; use `unixtime` / `UNIXtime` there.
+   `unixtime` / `UNIXtime` is the absolute UTC time in seconds (UNIX time), common to both gateways. Use it whenever you compare or merge the data of sensors on different gateways.
+
+   The figure below shows the time synchronized result of such a run. Two Dots were mounted side by side and excited by the same vibration: `Dot500016` connected to `Gateway00016` and `Dot500017` connected to `Gateway00017`. The two curves lie on top of each other, although the sensors were measured by different gateways.
+
+   ![Az of Dot500016 on Gateway00016 and Dot500017 on Gateway00017 after time synchronization, zoomed in on 0.3 s: the two curves lie on top of each other](./README_figures/TimeSyncedDots.png)
 
    Each plot has a toolbar above it with which you can zoom in, pan and save the displayed figure as an image file.
    This works in both the Measurement and the Calibration Window, during and after a run.
    It is independent of the `Save figures after measurement` option, which stores all plots automatically after every run, see [1.4 Advanced Settings](#14-advanced-settings).
 
-![Measure tab after a run, with the status line reading Measurement completed. Time synching ...](./README_figures/TimeSynching.png)
+![Measure tab after a run, with the status line reading Measurement completed. Time synching ..., the greyed-out Stop streaming button and the Start button](./README_figures/TimeSynching_v2.png)
 
 13. If you want to change the measurement settings, you can go back to the `Settings` tab by pressing the `Previous` button. If you want to change the connected sensors, you can go back to the `Connect` tab by pressing the `Previous` button twice.
 
 14. If you are done with your measurements, you can close the Measurement Window with pressing the `X` button on the top right. Then it will ask you 3 options, 1. Go to Main Menu, 2. Exit and 3. Cancel. If you want to exit the software, you can press the `Exit` button. This will disconnect the sensors and gateway and close the software. If you want to do a calibration, you can press the `Go to Main Menu` button. This will disconnect the sensors and gateway and bring you to the main menu.
+With two gateways, the sensors and both gateways are disconnected in the correct order. Wait until the software reports that everything is disconnected before you power the gateways off.
 
 ![Exit or Return dialog asking whether to go back to the Main Menu or quit, with Main Menu, Exit and Cancel buttons](./README_figures/exit_return.jpg)
+
+**If a gateway or sensor disconnects:**
+
+* If your PC loses the Wi-Fi connection to the gateway during a run, the gateway keeps measuring and recording the run. With two gateways, your PC also loses the secondary gateway, because it reaches it through the primary one, but both gateways keep measuring. Retrieve the run from the [Retrieval](#16-retrieval) page after it has ended; with two gateways, add the secondary gateway there and both parts are retrieved together, see [Two-gateway runs](#retrieving-two-gateway-runs).
+* If the secondary gateway loses its connection during a run, the primary gateway and its sensors continue the measurement.
+* If a sensor disconnects while you are connecting or preparing a run, the GUI returns to the `Connect` tab of that sensor's gateway. If it was a sensor of the primary gateway, the secondary gateway is removed too, so that you can reconnect both in order.
+* If a sensor disconnects during a run, the other sensors keep measuring and are time-synchronized as usual. The data of the disconnected sensor up to the disconnection is kept. If it is too corrupted to be time-synchronized, its file is kept without UTC time.
+
+<a id="measuring-with-multiple-gateways"></a>
+**Measuring with two gateways.**
+One gateway carries at most 6 sensors and 48 kHz of aggregated sampling rate, see [General info](#general-info).
+When your test needs more sensors than that, or the sensors are spread too far apart for one gateway to reach all of them, you can link two gateways and run them as one measurement.
+The gateways are connected to each other with an Ethernet cable and keep their clocks aligned over that cable with PTP (Precision Time Protocol, IEEE 1588), so the data of a sensor on one gateway can be compared sample by sample with the data of a sensor on the other gateway.
+
+![A two-gateway measurement: the PC connected over Wi-Fi to the primary gateway (PTP master), an Ethernet cable carrying the PTP clock sync to the secondary gateway (PTP slave), and up to 6 sensors connected over Bluetooth to each gateway](./README_figures/MultiGW_Overview.png)
+
+<a id="gateway-roles"></a>
+*Gateway roles.* The roles are set at the factory: one gateway is the **master**, the other the **slave**. Your PC connects over Wi-Fi to the master gateway, the **primary** gateway; the slave gateway is added as the **secondary** gateway and reached through the master over the Ethernet cable. The GUI shows the role of a connected gateway, e.g. `Connected Primary Gateway: Gateway00016 (Master)`.
+The slave gateway can also be used on its own: connect your PC to its Wi-Fi and measure as with a single gateway. The `Add Gateway` and `Remove Gateway` buttons are then hidden.
+
+*Setting up the gateways.* Connect the two gateways to each other with an Ethernet cable (Cat 5e or better) and power each from its own 5V/15W/3A power source. The order in which you power them on does not matter: the gateways align their clocks between themselves. Then connect your PC to the Wi-Fi of the master gateway, `forcebit[ID]-gw`. The gateway files of both gateways have to be in `[installation_path]\SensorAndGatewayFiles`.
+
+![Multiple Gateway Ethernet and Power Cabling](./README_figures/MultiGW_Cabling.jpg)
+
+<a id="preparing-your-pc-one-time-only"></a>
+*Preparing your PC (one time only).* Your PC talks to the secondary gateway through the primary gateway, and for this Windows needs one additional network route. It has to be installed once per PC and stays in place afterwards, also after a restart:
+
+1. Go to `[installation_path]\router setup`.
+2. Right-click `AddForcebitRoute.bat` and choose **Run as administrator**.
+3. Confirm the Windows security prompt. The script reports which network adapters it configured and waits for a key press.
+
+If you skip this step, the GUI warns you with `Gateway Network Route Missing` when you press `Add Gateway`; you can continue, but the secondary gateway will most likely fail to connect.
+To undo the change, for example before returning a laptop, run `RemoveForcebitRoute.bat` from the same folder, also as administrator.
+The route is only needed for the secondary gateway; measuring with a single gateway works without it.
+
+*Limits and rules.*
+
+* Each gateway keeps its own budget: max. 6 sensors and max. 48 kHz aggregated sampling rate per gateway.
+* A sensor belongs to exactly one gateway. Decide before the measurement which sensor is connected to which gateway.
+* The sensors of the primary gateway have to be connected before the secondary gateway is added, and the secondary gateway is always removed before the primary gateway.
+* Both gateways have to stay powered and cabled for the whole measurement. If the Ethernet link drops, the common time base is lost.
+* Calibration and nulling always use a single sensor on a single gateway, see [1.2 Calibration](#12-calibration) and [1.3 Nulling](#13-nulling).
 
 ### 1.2 Calibration
 
@@ -406,7 +551,8 @@ If you start a measurement with `Angle`, `Vel` or `Acc` selected for a sensor th
 
 ![Unsuccessful calibration dialog reading Calibration results are off. Please send an email to info@forcebit.eu for an explanation.](./README_figures/CalibrationFailed.png)
 
-The calibration constants are stored in `./temp/calibrationSettings_{perNr}.mat` file so you can send them along with the data for further analysis or support.
+The calibration constants and the smoothing level are stored in the sensor file in `[installation_path]\SensorAndGatewayFiles`, e.g. `Accbit400001.txt`, so you can send it along with the data for further analysis or support.
+They are also written into every result file of that sensor.
 
 ### 1.3 Nulling 
 
@@ -442,6 +588,7 @@ Numerical gains and offsets are the values that are set on the software side of 
 **Note:** When an ADC gain or offset is modified for a specific channel, the numerical gain and offset values are automatically reset to 1 and 0, respectively, for that channel.
 
 3. You can do the nulling by selecting the values and pressing `OK` button in the ADC dialog during and in-between measurements. You can see that the nulling is successful by checking the live plots and seeing the `New ADC values set.` message on the status label.
+The electronic and numerical gains and offsets are stored in the sensor file of that sensor and sent to the gateway straight away, so they are also used by the BAT files and your own scripts.
 
 ![Live plot after nulling, with the V2 trace stepping from about 2048 down to the reference value 1000](./README_figures/NullingResult.png)
 
@@ -460,13 +607,14 @@ In the `Settings` tab, you can press the `Advanced` button to open the `Advanced
 * **Save figures after measurement:** When checked, a `.png` snapshot (200 dpi) of each plot is saved to the measurement folder after the run completes, named `[run_name]_figure_[n].png`. Unchecked by default.
 * **Output Format:** Choose whether the results are stored as `HDF5 (.h5)` (checked by default), `CSV (.csv)` (unchecked by default), or both. If you only select `.csv`, the `.h5` files created during the measurement are automatically removed afterwards. If neither format is selected and `Save results automatically` is checked, you get a warning when closing the dialog, since the measurement data will not be saved to disk.
 * **Telbit / Forcebit Data - Store raw ADC data (12-bit, unscaled):** This option is only shown when a Telbit or Forcebit sensor is connected. When checked, the V1–V5 and temperature channels are stored as the raw, unscaled 12-bit ADC counts instead of being converted with the gain and offset values. Unchecked by default.
+* **Logging - Show 'Stop streaming':** When checked, a `Stop streaming` button is shown in the `Measure` tab during a run. With it you can disconnect your PC while the gateway keeps measuring and recording, see [1.5 Measuring without the PC](#15-measuring-without-the-pc-stop-streaming). Unchecked by default.
 
 When `CSV (.csv)` is selected, two more options appear:
 
 * **Delimiter:** `Semicolon ( ; )` (default) or `Comma ( , )`. Choose the one your Excel expects.
 * **Decimal separator:** `system` (default, follows your Windows setting), `dot` or `comma`. A comma cannot be used as delimiter and as decimal separator at the same time, so that combination is disabled.
 
-![Advanced Settings dialog with CSV selected, showing the delimiter and decimal separator options](./README_figures/AdvancedSettingsDialog.png)
+![Advanced Settings dialog with CSV selected, showing the delimiter and decimal separator options, and the Logging option ticked](./README_figures/AdvancedSettingsDialog_v2.png)
 
 **In the Calibration Window.** The same `Advanced` button is available in the `Settings` tab of the Calibration Window, with two differences:
 
@@ -474,8 +622,68 @@ When `CSV (.csv)` is selected, two more options appear:
 * **Save state figures after calibration:** writes one extra `[run_name]_states.png` containing the calibrated angle, velocity and acceleration. This figure is always written after a successful calibration, whether or not you displayed those signals in the plots.
 
 The raw ADC option is not offered for a calibration run, because a calibration records the `C1` to `C4` channels only.
+The `Logging` option is not offered either, because a calibration needs the PC for the whole run.
 
 These settings are saved in `[installation_path]\temp\sensor_settings.txt` and are remembered for your next measurement.
+
+### 1.5 Measuring without the PC (Stop streaming)
+
+For long measurements you do not have to keep your PC connected: you can start the run, disconnect your PC, and retrieve the results later.
+
+1. In the `Settings` tab, press `Advanced` and tick `Logging - Show 'Stop streaming'`, see [1.4 Advanced Settings](#14-advanced-settings).
+2. Start the measurement in the `Measure` tab as usual.
+3. Press `Stop streaming`. A dialog asks you to confirm and tells you until when the gateway keeps measuring.
+4. After you confirm, the live stream ends and you return to the Main Menu. The gateway keeps measuring and recording the run, and the sensors stay connected to it. The data received on your PC so far is deleted, because the complete run is on the gateway.
+5. When the run has ended, the gateway time-synchronizes and post-processes the results as usual and stores them under the same run name. Retrieve them from the [Retrieval](#16-retrieval) page.
+
+![Stop streaming confirmation telling that the gateway keeps measuring and logging the run until about 14:30](./README_figures/StopStreaming.png)
+
+If you connect to the gateway again while the run is still going on, the GUI tells you until when the run continues, and you can stop it prematurely, see [If the gateway is still measuring](#11-measurement).
+
+### 1.6 Retrieval
+
+Every run is stored on the gateway, see [Data processing and storage on the gateway](#data-processing-and-storage-on-the-gateway).
+With the `Retrieval` page you can copy any stored run to your PC at any time after the measurement, and delete runs you no longer need.
+
+1. In the Main Menu, choose `Retrieval`.
+2. The gateway is connected automatically, as in the Measurement Window. Otherwise, drop its gateway file on the `Drop Gateway File Here` area. When the status bar shows `Gateway connected. Press Load Results.`, you can continue.
+3. Press `Load Results`. The runs stored on the gateway are listed with their run name, date and time, size, sensors and gateways, the newest first, and the status bar shows how many runs the gateway holds.
+The bar above the list shows how much of the storage that the gateway keeps for runs is used, e.g. `Gateway storage: 1.5 GB of 10.0 GB used (8.5 GB free for new runs)`.
+
+![Retrieval page with Gateway00016 connected: the storage bar, the list of stored runs with their date, size, sensors and gateways, and the Data Folder, Delete and Retrieve buttons](./README_figures/Retrieval.png)
+
+4. Select the runs you want to copy by pressing `Click to Select` next to them; the button turns green and reads `Selected`. Press it again to deselect the run. Choose the `Data Folder` the runs are copied to (default `[installation_path]\data`).
+5. Press `Retrieve`. A progress bar appears below the list, and the status bar shows which run is copied from which gateway to which folder. When it is done, the status bar shows how many runs were retrieved and where. If a folder with the same run name already exists, the copy gets a `_1`, `_2`, ... suffix.
+6. To make space, select the runs and press `Delete`, and confirm the question. The runs are deleted from the gateway permanently, so retrieve them first if you still need them.
+
+<a id="retrieving-two-gateway-runs"></a>
+**Two-gateway runs.** Each gateway stores the results of its own sensors under the same run name. The Retrieval page puts the two parts back together for you:
+
+1. Connect the primary gateway as in steps 1 and 2.
+2. Press `Add Gateway`. The primary gateway looks for the secondary gateway on its Ethernet cable and connects it, as in the Measurement Window. You do not have to change the Wi-Fi of your PC.
+If your PC does not have the Forcebit network route yet, the `Gateway Network Route Missing` warning appears, see [Preparing your PC](#preparing-your-pc-one-time-only).
+3. Press `Load Results` on the primary gateway's page. The `Gateways` column shows which gateways hold a part of each run, and the `Sensors` column lists the sensors of both gateways.
+In the example below, `dots_cantilever` was measured with `Dot500016` on `Gateway 100016` and `Dot500017` on `Gateway 100017`, and is selected.
+
+![Retrieval page with Gateway00016 and Gateway00017 connected: the two-gateway run dots_cantilever lists both Dots and both gateways and is selected](./README_figures/RetrievalTwoGateways.png)
+
+4. Select the runs and press `Retrieve`. The parts of both gateways are copied into one run folder, so you get the same folder as after a live two-gateway measurement. While the run is copied, the buttons are greyed out and the progress bar shows how far it is.
+
+![Retrieval in progress: the buttons are greyed out, the progress bar stands at 45 percent and the status bar reads Retrieving dots_cantilever (1/1)](./README_figures/RetrievingMeasurement.png)
+
+5. `Delete` on the primary gateway's page deletes the selected runs from both gateways. The question names the gateways the runs are deleted from; press `Yes` to delete them or `No` to keep them.
+
+![Delete Runs question asking to delete 1 run from Gateway 100016 and Gateway 100017, with Yes and No buttons](./README_figures/DeletingMeasurement.png)
+
+Press `Remove Gateway` to disconnect the secondary gateway; `Retrieve` and `Delete` then reach the primary gateway only.
+The secondary gateway's own page lists the runs stored on that gateway, and retrieves and deletes them from that gateway only.
+
+**Notes:**
+
+* Only runs that have ended are listed. While a gateway is still measuring, the status bar tells you until when, and you can load the results again afterwards.
+* Only runs whose sensors are all time-synchronized are listed.
+* The two parts of a run are matched by their run name and start time. If the secondary gateway is still measuring or does not answer, only the primary gateway's part is listed.
+* A retrieved run folder contains the result files of every sensor and the `measurement.log` of the run. For a two-gateway run, each gateway's log is kept as `measurement_Gateway_[nr].log`.
 
 ## 2. How to run a measurement with BAT files 
 
@@ -486,7 +694,7 @@ Using the BAT file is a quick way to perform a measurement without using the GUI
 2. Check out the number written on your gateway, e.g. `GATEWAY 100007`. Then, 7 is the ID of your gateway.
 3. Connect to `forcebit[ID]-gw` Wi-Fi, in this case `forcebit7-gw`.
 4. Go to the directory that `ForcebitSW` is installed.
-5. Select the gateway that you will host and the sensors that you use for measurement in `gateway_and_sensor_selection.txt`. The user can find the sensor and gateway file in `[installation_path]\SensorAndGatewayFiles`. **Select maximum 6 sensors.** Just select the file names (without the extension) like in the example below:
+5. Select the gateway that you will host and the sensors that you use for measurement in `gateway_and_sensor_selection.txt`. The user can find the sensor and gateway file in `[installation_path]\SensorAndGatewayFiles`. **Select maximum 6 sensors per gateway.** Just select the file names (without the extension) like in the example below:
 
 ```
 Gateway00001
@@ -554,8 +762,24 @@ Gateway00001
 Dot500015 001
 ```
 
-Before running the measurement, you can set the filter values for a telbit sensor in `\temp\filters_[peripheral number].txt` file.
-Also it is possible to set ADC gains and offsets in `\temp\ADC_values_[peripheral number].txt` file for load sensors (Telbit and Forcebit) before the measurement.
+**Two gateways.** Write the primary (master) gateway first, followed by its sensors, then the secondary (slave) gateway, followed by its sensors.
+Every sensor belongs to the gateway written above it, and each gateway has its own limit of 6 sensors and 48 kHz:
+
+```
+Gateway00016
+Dot500001
+Telbit300009 111111
+Gateway00017
+Dot500002
+Accbit400005
+```
+
+The program connects to the primary gateway and its sensors first, then adds the secondary gateway and connects its sensors.
+Before the measurement starts, it waits until the clock of the secondary gateway is aligned with the primary gateway.
+Your PC needs the Forcebit network route for this, see [Preparing your PC](#preparing-your-pc-one-time-only).
+
+The filter cut-off frequencies and the ADC gains and offsets of the load sensors (Telbit and Forcebit) are read from their sensor files, see [One file per sensor](#data-processing-and-storage-on-the-gateway).
+Set them once in the GUI (`show more` and [Nulling](#13-nulling)) and the BAT files use them too.
 
 1. Set the measurement settings by editing `measurement_settings.txt`. The measurement settings are: 
   * **frequency:** the frequency of the sampling of the selected sensors as an `int`.
@@ -567,8 +791,9 @@ Also it is possible to set ADC gains and offsets in `\temp\ADC_values_[periphera
   * **diameter:** the shaft diameter in mm as an `int`, used by Accbit and Telbit. The default is 48 mm. Set it to your shaft, otherwise the rotational results are wrong.
   * **timeWindow:** the width of the live plot in s as an `int`.
   * **downsampling:** plots every n-th sample instead of every sample, as an `int`. Increase it if the live plots stutter.
+  * **logging:** `true` or `false` (default). With `logging = true`, the program starts the run and then lets the gateways measure and record it on their own: nothing is streamed to your PC or plotted. Retrieve the results from the [Retrieval](#16-retrieval) page after the run has ended. This is the BAT file equivalent of [Stop streaming](#15-measuring-without-the-pc-stop-streaming).
 
-**Note:** The 48 kHz aggregate sampling rate limit also applies here, see [General info](#general-info). Unlike the GUI, the BAT files do not warn you when you exceed it.
+**Note:** The 48 kHz aggregate sampling rate limit per gateway also applies here, see [General info](#general-info). Unlike the GUI, the BAT files do not warn you when you exceed it.
 
 2. Double-click on `clickRun.bat`. A command prompt will pop-up. The program will connect to the gateway, the gateway will scan the sensors in vicinity and connect the selected sensors if they are in range and charged.
 
@@ -605,6 +830,7 @@ Accbit400001
 
 The essential functionalities of the measurement software can be found in `Measurement.py`. 
 It is a good template, therefore, please take a copy of the original `Measurement.py` file or modify it at your own risk. 
+`Measurement.py` measures with two gateways: list the gateways in `gatewayIDs` (primary first) and the sensors of each gateway in `sensorIDs`. For a single gateway, keep only the first entry of both lists.
 After creating a copy, `Measurement.py` is at your disposal to understand and debug the code and its functionalities.
 
 ### 3.1 Using Python Scripting with Pycharm 
@@ -658,6 +884,7 @@ It covers all the steps described in Measurement with GUI above:
 * Creating sensor instances,
 * Scanning for the sensors,
 * Connecting the selected sensors if they were in scanned sensors,
+* Adding the secondary gateway (`AddGateway.m`) and scanning and connecting its sensors,
 * Setting the measurement settings and signals to measure for different type of sensors,
 * Performing the measurement for a predefined time,
 * Reading the measurement results and live plotting,
@@ -666,6 +893,9 @@ It covers all the steps described in Measurement with GUI above:
 * Disconnecting the gateway.
 
 Similarly, `Calibrate.m`, also in `[installation_path]`, shows how to calibrate an Accbit or Telbit.
+
+The gateway files are listed in `gatewayFiles` at the top of `Measurement.m` (primary first). For a single gateway, keep only the first one.
+The ADC gains and offsets of the load sensors are read from their sensor files (`SetADCvalues.m`), so the values you set with [Nulling](#13-nulling) in the GUI are used here too.
 
 Note that your Matlab script uses `PyForcebit` Python interface to call the functions in `MatlabfunctionsForPython` folder.
 If you used another python environment for a different purpose before Forcebit scripting, you have to restart Matlab to use the PyForcebit python environment.
@@ -941,17 +1171,16 @@ Please make sure that the path you extracted does not include special characters
 </details>
 
 <details>
-<summary><b>Q:</b> I double-click <code>MainGUI.bat</code> and the console window (black screen) closes immediately.</summary>
+<summary><b>Q:</b> I double-click <code>ForcebitApp.bat</code> and the console window (black screen) closes immediately.</summary>
 
 **Answer:** The `.bat` files activate the bundled Python environment with a relative path, so they only work from inside the installation folder.
 
 **Steps:**
 1. Make sure you double-click the `.bat` file in `[installation_path]` itself, and not a shortcut or a copy on your desktop.
 2. Check that the folder `[installation_path]\PyForcebit` exists. If it does not, the package was not extracted completely — unzip it again (preferably with 7-Zip).
-3. If the window still closes, open a command prompt in `[installation_path]`, run `MainGUI.bat` from there, read the error message that stays on the screen and contact us with that information.
+3. If the window still closes, open a command prompt in `[installation_path]`, run `ForcebitApp.bat` from there, read the error message that stays on the screen and contact us with that information.
 
 </details>
-
 ### Gateway and Sensor Connection
 
 <details>
@@ -1012,7 +1241,7 @@ Please make sure that the path you extracted does not include special characters
 </details>
 
 <details>
-<summary><b>Q:</b> During the measurement I get <code>Connection Lost - Gateway connection lost. Returning to connection page.</code></summary>
+<summary><b>Q:</b> I get <code>Connection Lost - Gateway connection lost. Returning to connection page.</code></summary>
 
 **Answer:** The software continuously checks the PC-gateway connection and returns to the `Connect` tab as soon as the gateway stops answering. This is a Wi-Fi connection problem, not a sensor problem.
 
@@ -1025,9 +1254,66 @@ Please make sure that the path you extracted does not include special characters
 </details>
 
 <details>
+<summary><b>Q:</b> My PC lost the connection to the gateway during a measurement. Is the run lost?</summary>
+
+**Answer:** No. The gateway records every run on its own storage and keeps measuring until the end of the run, also without the PC. With two gateways, both keep measuring, even though your PC loses both when the primary gateway's Wi-Fi drops.
+
+**Steps:**
+1. Reconnect your PC to the `forcebit[ID]-gw` Wi-Fi of the primary gateway.
+2. Wait until the run has ended. If you open the Measurement Window or the Retrieval page while it is still running, the status bar tells you until when.
+3. Retrieve the run from the [Retrieval](#16-retrieval) page. With two gateways, press `Add Gateway` there first, so that both parts of the run are retrieved together.
+
+**See also:** [Data processing and storage on the gateway](#data-processing-and-storage-on-the-gateway)
+
+</details>
+
+<details>
+<summary><b>Q:</b> The status bar shows <code>Measurement [run] running until hh:mm. Press stop to end prematurely.</code> and I cannot scan.</summary>
+
+**Answer:** The gateway is still running a measurement, for example after `Stop streaming`, after your PC lost the connection, or because another PC started it. A gateway can only run one measurement at a time.
+
+**Steps:**
+1. Wait until the given time. The gateway finishes the run and the GUI connects again by itself.
+2. Or press `Stop` to end the run prematurely. The gateway still finishes the run and stores the results under the same run name.
+3. Retrieve the run from the [Retrieval](#16-retrieval) page if you need it.
+
+**See also:** [1.1 Measurement](#11-measurement)
+
+</details>
+
+<details>
+<summary><b>Q:</b> The <code>Add Gateway</code> and <code>Remove Gateway</code> buttons are not shown.</summary>
+
+**Answer:** The buttons are hidden when your primary gateway is a PTP slave gateway, both on the `Connect` tab and on the Retrieval page. On the `Connect` tab they are also hidden when there is only one gateway file in `[installation_path]\SensorAndGatewayFiles`. A slave gateway can be used on its own, but it cannot reach another gateway.
+
+**Steps:**
+1. Connect your PC to the Wi-Fi of the master gateway instead, and use the slave gateway as the secondary gateway.
+2. Make sure the gateway files of both gateways are in `[installation_path]\SensorAndGatewayFiles`.
+
+**See also:** [Gateway roles](#gateway-roles)
+
+</details>
+
+<details>
+<summary><b>Q:</b> The secondary gateway is not connected automatically after <code>Add Gateway</code>, or it fails to connect.</summary>
+
+**Answer:** The primary gateway looks for the other gateway on its Ethernet cable. If it finds none, or the gateway it finds has no gateway file in your installation, you have to drop the gateway file yourself. If it still fails to connect, your PC cannot reach it.
+
+**Steps:**
+1. Check that the Ethernet cable is plugged into both gateways and that both gateways are powered.
+2. Check that the gateway file of the secondary gateway is in `[installation_path]\SensorAndGatewayFiles`, or drop it on the `Drop Secondary Gateway File Here` area.
+3. Check that the Forcebit network route is installed, see [Preparing your PC](#preparing-your-pc-one-time-only). Without it, the GUI warns `Gateway Network Route Missing`.
+
+On the Retrieval page, the secondary gateway can only be found through the Ethernet cable; you cannot drop its gateway file there. If it is not found, the status bar shows `The secondary gateway could not be connected. Please check its Ethernet cable and retry.` Check steps 1 and 3, then press `Add Gateway` again.
+
+**See also:** [1.1 Measurement](#11-measurement), [1.6 Retrieval](#retrieving-two-gateway-runs)
+
+</details>
+
+<details>
 <summary><b>Q:</b> How many sensors can I use at the same time?</summary>
 
-**Answer:** Up to **6 sensors** per gateway, and the sum of all sampled channels must stay within 48 kHz. For calibration, only **one** sensor can be selected at a time.
+**Answer:** Up to **6 sensors** per gateway, and the sum of all sampled channels of a gateway must stay within 48 kHz. With two gateways, you can use up to 12 sensors in one run. For calibration, only **one** sensor can be selected at a time.
 
 **See also:** [General info](#general-info)
 
@@ -1045,9 +1331,9 @@ Please make sure that the path you extracted does not include special characters
 ### Measurement and Settings
 
 <details>
-<summary><b>Q:</b> I get <code>Aggregate Sampling Rate Exceeded - Please ask up to 48kHz in aggregate</code>.</summary>
+<summary><b>Q:</b> I get <code>Aggregate Sampling Rate Exceeded - Please ask up to 48kHz in aggregate per gateway</code>.</summary>
 
-**Answer:** The gateway can handle 48 kHz in total over all connected sensors. The aggregate is the sum of (number of selected signals × sampling rate) of every sensor.
+**Answer:** A gateway can handle 48 kHz in total over all its connected sensors. The aggregate is the sum of (number of selected signals × sampling rate) of every sensor of that gateway. With two gateways, each gateway has its own 48 kHz.
 
 **Steps:**
 1. Lower the sampling rate of sensors. (Note that keeping the same sampling rate for every sensor gives the best performance.)
@@ -1249,10 +1535,13 @@ Peripheral[nr]_[YYYY-MM-DD]_[HH-MM].csv    same data as text (if CSV is selected
 calibrationPeripheral[nr]_[date]_[time].h5/.csv   channels recorded during a calibration run
 [run_name]_figure_[n].png                  plot snapshots (if enabled)
 [run_name]_states.png                      calibrated angle, velocity and acceleration (if enabled)
-measurement.log                            sample frames that were not received
+measurement.log                            lost frames, clipping and other events of the run
+measurement_Gateway_[nr].log               the same, one per gateway, for a two-gateway run
 ```
 
-`measurement.log` is written for every run. It lists the sample frames that did not reach your PC, so you can check afterwards whether the run was complete. An empty file means that no data was lost.
+`measurement.log` is written by the gateway for every run, also for calibration runs. It lists the sample frames that were lost, the channels that were clipping and other events during the run, so you can check afterwards whether the run was complete.
+
+Every result file also contains the absolute UTC time of every sample (`unixtime` in `.h5`, `UNIXtime` in `.csv`) and the configuration of the sensor: calibration constants, smoothing level, ADC and numerical gains and offsets.
 
 The default data folder is `[installation_path]\data`, and the default run name is `run`. You can change the data folder in the `Settings` page and you can determine the run name at the top right edit label in `Measure` page.
 
@@ -1310,9 +1599,62 @@ A comma cannot be used as delimiter and as decimal separator at the same time, s
 <details>
 <summary><b>Q:</b> What is the <code>Time synching ...</code> step after the measurement, and why does it take so long?</summary>
 
-**Answer:** Each sensor samples with its own clock. When more than one sensor is used, the software aligns the recorded data onto a common time base after the run, so that the signals of all sensors can be compared sample by sample. The duration grows with the number of sensors and the length of the measurement. With a single sensor this step is skipped.
+**Answer:** Each sensor samples with its own clock. After the run, the gateway aligns the recorded data onto a common time base and adds the absolute UTC time, so that the signals of all sensors, also of different gateways, can be compared sample by sample. In the same step, it updates the angle, velocity and acceleration of Accbits, Telbits and Forcebits with the smoothing filter. Your PC then downloads the finished results. The duration grows with the number of sensors and the length of the measurement.
 
-**See also:** [1.1 Measurement](#11-measurement)
+**See also:** [1.1 Measurement](#11-measurement), [Data processing and storage on the gateway](#data-processing-and-storage-on-the-gateway)
+
+</details>
+
+<details>
+<summary><b>Q:</b> My run is not listed on the Retrieval page.</summary>
+
+**Answer:** The Retrieval page only lists runs that have ended and whose sensors are all time-synchronized.
+
+| Possible cause | What to do |
+|---|---|
+| The gateway is still measuring the run | Wait until the time shown in the status bar, then press `Load Results` again |
+| The run is only on the secondary gateway, or its part there is missing from the primary gateway's list | Press `Add Gateway` and check the secondary gateway's page. A secondary gateway that is still measuring or does not answer is left out of the primary gateway's list |
+| One of the sensors could not be time-synchronized, e.g. because it disconnected early in the run | Contact us at [info@forcebit.eu](mailto:info@forcebit.eu) with the run name |
+| The run was deleted to make room for newer runs | Retrieve your runs regularly, see [Storage](#data-processing-and-storage-on-the-gateway) |
+
+**See also:** [1.6 Retrieval](#16-retrieval)
+
+</details>
+
+<details>
+<summary><b>Q:</b> Do I have to retrieve every run from the Retrieval page?</summary>
+
+**Answer:** No. After a normal measurement, your PC downloads the finished results into your data folder by itself. You only need the Retrieval page for runs that your PC did not receive: after `Stop streaming`, after a measurement with `logging = true` in the BAT files, after your PC lost the connection, or for an older run whose folder you deleted on your PC.
+
+**See also:** [1.6 Retrieval](#16-retrieval)
+
+</details>
+
+<details>
+<summary><b>Q:</b> Retrieval reports <code>These runs could not be retrieved</code>, or a run with <code>(part on Gateway [nr] missing)</code>.</summary>
+
+**Answer:** The connection to a gateway broke down while the run was being copied. A run that is listed without the remark could not be copied at all. A run with `(part on Gateway [nr] missing)` was copied, but only with the files of the other gateway.
+
+**Steps:**
+1. Check that your PC is still connected to the Wi-Fi of the primary gateway and, for a two-gateway run, that the Ethernet cable and the power of the secondary gateway are fine.
+2. Delete the incomplete run folder on your PC, otherwise the next copy gets a `_1` suffix next to it.
+3. Press `Load Results` and `Retrieve` the run again. The run stays on the gateway until you delete it there.
+
+**See also:** [1.6 Retrieval](#16-retrieval)
+
+</details>
+
+<details>
+<summary><b>Q:</b> I get a <code>Gateway storage</code> warning when I press <code>Start</code>.</summary>
+
+**Answer:** The run does not fit in the storage that the gateway keeps for runs. The warning tells you how long the gateway can record at these settings, or how many old runs will be deleted to make room.
+
+**Steps:**
+1. Press `Cancel` and retrieve the runs you still need from the [Retrieval](#16-retrieval) page, then delete them there. The warning names the gateway that is short of space; for a two-gateway setup, press `Add Gateway` on the Retrieval page first, so that `Delete` frees the space on both gateways.
+2. Or shorten the measurement, or lower the sampling rate or the number of signals.
+3. Or press `Start anyway`. If the gateway runs out of space, it stops recording at that point, while streaming to your PC continues.
+
+**See also:** [Data processing and storage on the gateway](#data-processing-and-storage-on-the-gateway)
 
 </details>
 
@@ -1378,22 +1720,22 @@ The plotting only affects the display — the data is recorded regardless of wha
 
 **Answer:** The console window (black screen) that opens next to the GUI prints the detailed progress and error messages of the backend, while the status bar of the GUI only shows the short version. Keep that window open during measurements and include its content when you report a problem to us.
 
-In addition, every measurement folder contains a `measurement.log` file that lists the sample frames which were not received during that run. If the file is empty, no data was lost. If it contains many entries, the link between your PC and the gateway is the first thing to check, see the [Connectivity Test](#connectivity-test).
+In addition, every measurement folder contains a `measurement.log` file, written by the gateway, that lists the lost sample frames, clipping channels and other events of that run. If it lists many lost frames, the link between the sensors and the gateway is the first thing to check: the distance, obstacles and the battery of the sensors.
 
 </details>
 
 <details>
 <summary><b>Q:</b> My settings, filters or ADC values were lost.</summary>
 
-**Answer:** The software remembers the last used configuration in `[installation_path]\temp`:
+**Answer:** The configuration of each sensor is stored in its sensor file, and the last used measurement settings in the `temp` folder:
 
 | File | Content |
 |---|---|
-| `sensor_settings.txt` | Sampling rate, ranges, selected signals, output settings |
-| `filters_[nr].txt` | Filter cut-off frequencies of a Telbit |
-| `ADC_values_[nr].txt` | ADC gains and offsets of a load sensor |
-| `calibrationSettings_[nr].mat` | Calibration result of a sensor |
+| `SensorAndGatewayFiles\[type][nr].txt`, e.g. `Telbit300002.txt` | Calibration constants and smoothing level, ADC gains and offsets, numerical gains and offsets, filter cut-off frequencies |
+| `temp\sensor_settings.txt` | Sampling rate, ranges, selected signals, output settings |
 
-If you delete the `temp` folder, or copy the software to another PC without it, all of these fall back to their default values and the sensors have to be calibrated and nulled again.
+If you replace a sensor file with the original file provided with the sensor, or copy the software to another PC without your sensor files, the sensor has to be calibrated and nulled again.
+Keep a copy of your sensor files after calibrating and nulling.
+If you delete the `temp` folder, only the measurement settings fall back to their default values.
 
 </details>
